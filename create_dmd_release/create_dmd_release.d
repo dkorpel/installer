@@ -359,7 +359,30 @@ void buildAll(Bits bits, string branch)
             usePGO = false;
     }
 
-    if (usePGO)
+    if (!readText(cloneDir~"/dmd/Makefile").canFind("\ndmd-pgo:"))
+    {
+        version (FreeBSD)
+            const ltoOption = " ENABLE_LTO=0";
+        else version (linux)
+            const ltoOption = " ENABLE_LTO=" ~ (is32 ? "0" : "1");
+        else version (OSX)
+            const ltoOption = " ENABLE_LTO=0";
+        else
+            const ltoOption = " ENABLE_LTO=1";
+
+        info("Building DMD "~bitsDisplay);
+        changeDir(cloneDir~"/dmd");
+        run(msvcVars~makecmd~ltoOption~" HOST_DMD="~hostDMD~" dmd");
+
+        info("Building Druntime "~bitsDisplay);
+        changeDir(cloneDir~"/dmd/druntime");
+        run(msvcVars~makecmd~pic);
+
+        info("Building Phobos "~bitsDisplay);
+        changeDir(cloneDir~"/phobos");
+        run(msvcVars~makecmd~pic);
+    }
+    else if (usePGO)
     {
         string pgoDflags;
         version (OSX)
